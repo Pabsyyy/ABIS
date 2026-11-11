@@ -2,16 +2,29 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Plus, RefreshCw, ShieldCheck, ShieldOff, KeyRound } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, ShieldCheck, ShieldOff, KeyRound, Link2 } from 'lucide-react';
 import { api, type ApiUser, type ApiResponse } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 
 type Role = ApiUser['role'];
 const ROLES: Role[] = ['secretary', 'treasurer', 'captain', 'resident', 'other'];
+
+interface ResidentOption {
+  _id: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  purok?: string;
+}
+
+function residentFullName(r: ResidentOption) {
+  return [r.firstName, r.middleName, r.lastName].filter(Boolean).join(' ');
+}
 
 export default function UsersPage() {
   const router = useRouter();
@@ -25,6 +38,14 @@ export default function UsersPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('treasurer');
+  const [residentRef, setResidentRef] = useState('');
+  const [residentQuery, setResidentQuery] = useState('');
+  const [residentOptions, setResidentOptions] = useState<ResidentOption[]>([]);
+  const [linkUser, setLinkUser] = useState<ApiUser | null>(null);
+  const [linkQuery, setLinkQuery] = useState('');
+  const [linkOptions, setLinkOptions] = useState<ResidentOption[]>([]);
+  const [linkRef, setLinkRef] = useState('');
+  const [linking, setLinking] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,6 +68,64 @@ export default function UsersPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (role !== 'resident') {
+      setResidentRef('');
+      setResidentOptions([]);
+      return;
+    }
+    if (residentQuery.trim().length < 2) {
+      setResidentOptions([]);
+      return;
+    }
+    const handle = setTimeout(() => {
+      api<ResidentOption[]>(`/api/residents?search=${encodeURIComponent(residentQuery.trim())}&limit=8`).then((res) => {
+        if (res.success && res.data) {
+          setResidentOptions((res.data as ResidentOption[]).map((r) => ({ _id: r._id, firstName: r.firstName, middleName: r.middleName, lastName: r.lastName, purok: r.purok })));
+        }
+      });
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [role, residentQuery]);
+
+  useEffect(() => {
+    if (!linkUser) return;
+    if (linkQuery.trim().length < 2) {
+      setLinkOptions([]);
+      return;
+    }
+    const handle = setTimeout(() => {
+      api<ResidentOption[]>(`/api/residents?search=${encodeURIComponent(linkQuery.trim())}&limit=8`).then((res) => {
+        if (res.success && res.data) {
+          setLinkOptions((res.data as ResidentOption[]).map((r) => ({ _id: r._id, firstName: r.firstName, middleName: r.middleName, lastName: r.lastName, purok: r.purok })));
+        }
+      });
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [linkUser, linkQuery]);
+
+  const linkAccount = async () => {
+    if (!linkUser || !linkRef) return;
+    setLinking(true);
+    setError(null);
+    const res = await api(`/api/users/${linkUser.id}`, { method: 'PATCH', body: JSON.stringify({ residentRef: linkRef }) });
+    setLinking(false);
+    if (!res.success) {
+      setError(res.message ?? 'Failed to link account');
+      return;
+    }
+    setNotice(`"${linkUser.username}" linked to resident record.`);
+    setLinkUser(null);
+    setLinkRef('');
+    setLinkQuery('');
+    setLinkOptions([]);
+    await load();
+  };
+
+
+
+
+
   const createUser = async (e: FormEvent) => {
     e.preventDefault();
     setNotice(null);
@@ -54,7 +133,7 @@ export default function UsersPage() {
     setSubmitting(true);
     const res = await api('/api/users', {
       method: 'POST',
-      body: JSON.stringify({ fullName, username, password, role }),
+      body: JSON.stringify(role === 'resident' ? { fullName, username, password, role, residentRef } : { fullName, username, password, role }),
     });
     setSubmitting(false);
     if (!res.success) {
@@ -66,6 +145,8 @@ export default function UsersPage() {
     setUsername('');
     setPassword('');
     setRole('treasurer');
+    setResidentRef('');
+    setResidentQuery('');
     await load();
   };
 
@@ -146,7 +227,34 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
-              <Button type="submit" disabled={submitting}>
+              {role === 'resident' && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="residentQuery">Link resident *</Label>
+                  {residentRef ? (
+                    <div className="flex items-center justify-between rounded-md border border-accent bg-background-light px-3 py-2 text-sm">
+                      <span className="text-foreground">{residentOptions.find((o) => o._id === residentRef) ? residentFullName(residentOptions.find((o) => o._id === residentRef)!) : 'Selected resident'}</span>
+                      <button type="button" className="text-xs text-accent hover:underline" onClick={() => { setResidentRef(''); setResidentQuery(''); }}>Change</button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input id="residentQuery" value={residentQuery} onChange={(e) => setResidentQuery(e.target.value)} placeholder="Search resident name…" />
+                      {residentOptions.length > 0 && (
+                        <ul className="max-h-40 overflow-y-auto rounded-md border border-border">
+                          {residentOptions.map((r) => (
+                            <li key={r._id}>
+                              <button type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-background-light" onClick={() => { setResidentRef(r._id); setResidentQuery(''); }}>
+                                {residentFullName(r)} <span className="text-xs text-muted">{r.purok ?? ''}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                  <p className="text-xs text-muted">A resident account is linked to one resident record; one account per resident. Add the resident in the Residents module first.</p>
+                </div>
+              )}
+              <Button type="submit" disabled={submitting || (role === 'resident' && !residentRef)}>
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                 Create account
               </Button>
@@ -157,7 +265,7 @@ export default function UsersPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Authorized accounts</CardTitle>
-            <CardDescription>Residents are not system users unless a limited Resident account is created here.</CardDescription>
+            <CardDescription>Staff and resident accounts. Residents get self-service access only and cannot use staff functions.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
@@ -181,7 +289,7 @@ export default function UsersPage() {
                       <tr key={user.id} className="hover:bg-background">
                         <td className="px-4 py-3 font-medium text-primary">{user.fullName}</td>
                         <td className="px-4 py-3 text-foreground">{user.username}</td>
-                        <td className="px-4 py-3 capitalize text-foreground">{user.role}</td>
+                        <td className="px-4 py-3 capitalize text-foreground">{user.role}{user.role === 'resident' && <span className="ml-1 text-[10px] normal-case text-muted">({user.residentRef ? 'linked' : 'not linked'})</span>}</td>
                         <td className="px-4 py-3">
                           <span className={cn('inline-flex rounded-full px-2 py-0.5 text-xs font-medium', user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}>
                             {user.isActive ? 'Active' : 'Deactivated'}
@@ -189,6 +297,11 @@ export default function UsersPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
+                            {user.role === 'resident' && (
+                              <Button variant="ghost" size="sm" title={user.residentRef ? 'Change linked resident' : 'Link to a resident record'} onClick={() => { setLinkUser(user); setLinkRef(user.residentRef ?? ''); setLinkQuery(''); setLinkOptions([]); }}>
+                                <Link2 size={16} />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="sm" title="Reset password" onClick={() => void resetPassword(user)}>
                               <KeyRound size={16} />
                             </Button>
@@ -206,6 +319,32 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Modal open={linkUser !== null} onClose={() => setLinkUser(null)} title="Link resident account" description={linkUser ? `Link "${linkUser.username}" to a resident record. The resident must exist in the Residents module first.` : ''}>
+        <div className="flex flex-col gap-3">
+          <Label htmlFor="linkQuery">Search resident *</Label>
+          <Input id="linkQuery" value={linkQuery} onChange={(e) => setLinkQuery(e.target.value)} placeholder="Type first or last name…" autoFocus />
+          {linkRef ? (
+            <p className="rounded-md border border-accent bg-background-light px-3 py-2 text-sm text-foreground">Selected resident: <span className="font-mono text-xs">{linkRef}</span></p>
+          ) : linkOptions.length > 0 ? (
+            <ul className="max-h-52 overflow-y-auto rounded-md border border-border">
+              {linkOptions.map((r) => (
+                <li key={r._id}>
+                  <button type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-background-light" onClick={() => { setLinkRef(r._id); setLinkQuery(residentFullName(r)); setLinkOptions([]); }}>
+                    {residentFullName(r)} <span className="text-xs text-muted">{r.purok ?? ''}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : linkQuery.trim().length >= 2 ? (
+            <p className="text-xs text-muted">No residents found. Add the resident in the Residents module first.</p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setLinkUser(null)}>Cancel</Button>
+            <Button onClick={() => void linkAccount()} disabled={linking || !linkRef}>{linking ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}Save link</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

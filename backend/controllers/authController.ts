@@ -54,6 +54,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         username: user.username,
         fullName: user.fullName,
         role: user.role,
+        residentRef: user.residentRef ? String(user.residentRef) : null,
         mustChangePassword: user.mustChangePassword,
       },
     },

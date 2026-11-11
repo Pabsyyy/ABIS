@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-export const USER_ROLES = ['resident', 'secretary', 'treasurer', 'captain', 'other'] as const;
+export const USER_ROLES = ['secretary', 'treasurer', 'captain', 'resident', 'other'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
 export interface IUser extends Document {
@@ -32,7 +32,7 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true, select: false },
     fullName: { type: String, required: true, trim: true, maxlength: 128 },
     role: { type: String, required: true, enum: USER_ROLES, index: true },
-    residentRef: { type: Schema.Types.ObjectId, ref: 'Resident' },
+    residentRef: { type: Schema.Types.ObjectId, ref: 'Resident', unique: true, sparse: true },
     isActive: { type: Boolean, default: true, index: true },
     mustChangePassword: { type: Boolean, default: false },
     lastLoginAt: { type: Date },

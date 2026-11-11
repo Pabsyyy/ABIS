@@ -35,6 +35,10 @@ Three-tier architecture (manuscript Figure 3), adapted to the approved stack.
 
 ## Environments
 
-- development: local MongoDB / memory server; relaxed CORS localhost:3000
+- development: Atlas `abis` (current) or local MongoDB / memory server (`USE_MEMORY_DB=true`)
 - production: HTTPS, strict CORS allowlist, `NODE_ENV=production`, secure cookies (`Secure`,
-  `SameSite=Lax`), managed or local MongoDB
+  `SameSite=Lax`), managed or local MongoDB (see docs/deployment/deployment-guide.md)
+
+## Diagrams
+
+Mermaid: `system-architecture.mmd` (layers) and `docs/database/erd.mmd` (entities).

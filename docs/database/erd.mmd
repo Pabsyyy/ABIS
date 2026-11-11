@@ -1,0 +1,35 @@
+erDiagram
+    USERS { string username string passwordHash string fullName string role bool isActive }
+    RESIDENTS { string firstName string lastName date birthdate string sex string civilStatus string purok string address string classifications status }
+    HOUSEHOLDS { string householdNumber string purok }
+    PUROKS { string name }
+    CLASSIFICATIONS { string key string label }
+    CERTIFICATE_TYPES { string name number fee bool requiresApproval bool active }
+    CERTIFICATE_REQUESTS { string purpose string status string controlNumber }
+    ISSUED_CERTIFICATES { string controlNumber number fee string paymentStatus }
+    PAYMENTS { number amount string orNumber string paymentStatus }
+    SERVICE_CATEGORIES { string name }
+    SERVICE_RECORDS { date serviceDate string description }
+    ACTIVITY_LOGS { string action }
+    NOTIFICATIONS { string title string type bool read }
+    SMS_LOGS { string recipient string status }
+    SYSTEM_SETTINGS { string key string barangayName }
+    BACKUP_LOGS { string filename string status }
+
+    USERS ||--o{ ACTIVITY_LOGS : "is logged in"
+    USERS ||--o{ CERTIFICATE_REQUESTS : "requests/processes"
+    USERS ||--o{ SERVICE_RECORDS : "records"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    RESIDENTS ||--o{ CERTIFICATE_REQUESTS : "subject of"
+    RESIDENTS ||--o{ ISSUED_CERTIFICATES : "issued to"
+    RESIDENTS ||--o{ SERVICE_RECORDS : "receives"
+    RESIDENTS ||--o{ PAYMENTS : "pays (via issued certificates)"
+    HOUSEHOLDS ||--o{ RESIDENTS : "head/members"
+    PUROKS ||--o{ HOUSEHOLDS : "contains"
+    PUROKS ||--o{ RESIDENTS : "located in"
+    CERTIFICATE_TYPES ||--o{ CERTIFICATE_REQUESTS : "of type"
+    CERTIFICATE_REQUESTS ||--|| ISSUED_CERTIFICATES : "generates"
+    ISSUED_CERTIFICATES ||--o{ PAYMENTS : "paid via"
+    SERVICE_CATEGORIES ||--o{ SERVICE_RECORDS : "categorizes"
+    USERS ||--o{ HOUSEHOLDS : "head assignment"
+    USERS ||--o{ BACKUP_LOGS : "creates"

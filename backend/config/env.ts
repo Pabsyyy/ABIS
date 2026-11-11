@@ -34,5 +34,11 @@ export const env = {
     secretaryUsername: process.env.SEED_SECRETARY_USERNAME ?? 'secretary',
     secretaryPassword: process.env.SEED_SECRETARY_PASSWORD ?? 'ChangeMe123!',
     secretaryFullName: process.env.SEED_SECRETARY_FULLNAME ?? 'Barangay Secretary',
+    treasurerUsername: process.env.SEED_TREASURER_USERNAME ?? 'treasurer',
+    treasurerPassword: process.env.SEED_TREASURER_PASSWORD ?? 'ChangeMe123!',
+    treasurerFullName: process.env.SEED_TREASURER_FULLNAME ?? 'Barangay Treasurer',
+    captainUsername: process.env.SEED_CAPTAIN_USERNAME ?? 'captain',
+    captainPassword: process.env.SEED_CAPTAIN_PASSWORD ?? 'ChangeMe123!',
+    captainFullName: process.env.SEED_CAPTAIN_FULLNAME ?? 'Punong Barangay',
   },
 };

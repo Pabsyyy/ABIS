@@ -7,8 +7,17 @@ import { api, type ApiUser } from '@/lib/api';
 import { Sidebar } from '@/components/sidebar';
 
 const breadcrumbLabels: Record<string, string> = {
+  me: 'My Profile',
+  'my-requests': 'My Requests',
+  corrections: 'Correction Requests',
   dashboard: 'Dashboard',
+  residents: 'Residents',
+  households: 'Households',
+  certificates: 'Certificates',
+  services: 'Services',
+  reports: 'Reports',
   users: 'User Management',
+  logs: 'Activity Logs',
   settings: 'Settings',
 };
 

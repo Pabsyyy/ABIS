@@ -2,15 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut, Landmark, UserRound } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, HandHeart, BarChart3, UserCog, ScrollText, Settings, LogOut, Landmark, UserRound, Home, ClipboardList, IdCard, ListChecks } from 'lucide-react';
 import { useState } from 'react';
 import { api, type ApiUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
+type NavRole = ApiUser['role'];
+
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['resident', 'secretary', 'treasurer', 'captain', 'other'] },
-  { href: '/users', label: 'User Management', icon: Users, roles: ['secretary'] },
-  { href: '/settings', label: 'Settings', icon: Settings, roles: ['secretary', 'treasurer', 'captain', 'resident', 'other'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['secretary', 'treasurer', 'captain', 'other'] as NavRole[] },
+  { href: '/my-requests', label: 'My Requests', icon: ClipboardList, roles: ['resident'] as NavRole[] },
+  { href: '/me', label: 'My Profile', icon: IdCard, roles: ['resident'] as NavRole[] },
+  { href: '/residents', label: 'Residents', icon: Users, roles: ['secretary', 'treasurer', 'captain'] as NavRole[] },
+  { href: '/households', label: 'Households', icon: Home, roles: ['secretary', 'treasurer', 'captain'] as NavRole[] },
+  { href: '/certificates', label: 'Certificates', icon: FileText, roles: ['secretary', 'treasurer', 'captain'] as NavRole[] },
+  { href: '/services', label: 'Services', icon: HandHeart, roles: ['secretary', 'treasurer', 'captain'] as NavRole[] },
+  { href: '/reports', label: 'Reports', icon: BarChart3, roles: ['secretary', 'treasurer', 'captain'] as NavRole[] },
+  { href: '/users', label: 'User Management', icon: UserCog, roles: ['secretary'] as NavRole[] },
+  { href: '/logs', label: 'Activity Logs', icon: ScrollText, roles: ['secretary'] as NavRole[] },
+  { href: '/corrections', label: 'Corrections', icon: ListChecks, roles: ['secretary'] as NavRole[] },
+  { href: '/settings', label: 'Settings', icon: Settings, roles: ['secretary', 'treasurer', 'captain', 'other'] as NavRole[] },
 ];
 
 export function Sidebar({ user }: { user: ApiUser }) {
@@ -28,7 +39,7 @@ export function Sidebar({ user }: { user: ApiUser }) {
   const visibleItems = navItems.filter((item) => item.roles.includes(user.role));
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-secondary bg-primary text-white">
+    <aside className="flex h-screen w-64 flex-col border-r border-secondary bg-primary text-white print:hidden">
       <div className="flex items-center gap-2 border-b border-white/10 px-5 py-4">
         <Landmark size={22} className="text-accent-light" />
         <div className="leading-tight">

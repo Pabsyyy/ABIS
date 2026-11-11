@@ -120,7 +120,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="mt-4 text-center text-xs text-white/60">
-          Residents are served at the Barangay Hall. No public registration.
+          Residents sign in with the account issued at the Barangay Hall for self-service; barangay staff manage all records.
         </p>
       </div>
     </main>

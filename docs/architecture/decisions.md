@@ -9,11 +9,7 @@ D-1. **Database: MongoDB + Mongoose (approved).** Manuscript System Architecture
    tracked in `backupLogs` (MongoDB cannot file-dump inside itself). Manuscript backup wording
    adapted, scope unchanged.
 
-D-2. **Resident accounts: ENABLED (approved).** The master prompt stated residents have no login;
-   the manuscript (Figure 4, System Architecture) defines a limited Resident account. Project
-   owner chose the manuscript. Resident role implemented with strict limits: own requests, own
-   profile, own issued documents, correction requests. No access to other residents, reports,
-   user accounts, or admin functions.
+D-2. **Resident accounts: REMOVED (superseded by D-14).** Earlier approved; no longer valid.
 
 D-3. **Certificate types: common PH set, editable (approved).** Manuscript does not list the
    actual certificate types used by Barangay Ambucao. Initial seed (all editable by Secretary):
@@ -59,3 +55,57 @@ D-12. **Barangay letterhead/logo** OPEN: needed for certificate PDF. Placeholder
 
 D-13. **Receipt (OR) numbering** OPEN: barangay official receipt series unknown; recorded as free
    text input by Treasurer/Secretary until confirmed.
+
+D-14. **Resident accounts REMOVED (user-approved, supersedes D-2).** The approved master prompt
+   states: "Residents are records in the system, not user login accounts", "Residents submit
+   requests at the Barangay Hall. Do not create a public resident portal", "Do not introduce
+   additional user types without authorization." The limited Resident role defined by the
+   manuscript (Figure 4) is dropped from development. Implementation: `resident` removed from
+   USER_ROLES and from the users admin UI; all resident-record access is staff-only
+   (Treasurer/Captain read-only; Secretary full). Requests are encoded by the Secretary on the
+   resident's behalf at the hall. If self-service is ever wanted later, it requires explicit
+   written approval and scope change — not part of this build.
+
+D-15. **Secrets in chat.** Atlas password `PabsLaptop` was shared in chat during configuration.
+   Stored only in `backend/.env` (git-ignored). Rotate the Atlas user password after
+   development; rotate the temporary `testadmin` secretary account password on first login.
+
+D-16. **Development/verification database.** Verification runs against a throwaway Atlas
+   database (`abis_verify`), created before testing and dropped afterward, so `abis` (the live
+   development database) is never polluted with test records. `mongodb-memory-server` remains
+   available as an offline fallback (`USE_MEMORY_DB=true`) but is not the default.
+
+D-17. **Backup implementation.** No `mongodump` on the development machine. Backup =
+   application-level export of all collections to a timestamped JSON file under `backend/backups/`
+   (git-ignored); restore requires password re-confirmation and replaces collections wholesale.
+   Backup metadata recorded in `backupLogs`. Meets FR-7.5/NFR-9 without shelling out to MongoDB
+   tooling.
+
+D-18. **Test data policy.** No fabricated resident records are inserted into `abis`. Alpha
+   testing uses synthetic, obviously-fictional data in `abis_verify` only, which is dropped after
+   testing. ISO/IEC 25010 evaluation scores are NOT fabricated — instruments prepared; actual
+   administration with respondents pending.
+
+D-19. **Seed accounts.** Atlas `abis` currently holds only `testadmin` (role secretary), created
+   during Sprint 1 verification. The seed script additionally creates the `secretary`, `treasurer`,
+   and `captain` accounts ONLY IF ABSENT, using env-provided credentials that MUST be changed
+   before deployment (`.env.example` documents placeholders). No treasurer/captain accounts exist
+   in `abis` yet.
+
+D-20. **Resident self-service restored (user decision).** After D-14 removed resident logins,
+   the user explicitly requested the resident role back with the manuscript's limited
+   self-service: own profile, own requests (create/track/view), own issued documents (PDF),
+   correction requests to the Secretary (field whitelist), enforced by `authorize('resident')`
+   and `req.user.residentRef`. Staff routes unchanged (resident 403 everywhere else).
+   Migration: `residentRef` (sparse unique) added to users; `correctionRequests` collection;
+   `meRoutes` under `/api/me/*`; resident nav limited to My Requests / My Profile; Secretary gets
+   Approval queue at `/corrections` + notifications. All test artifacts created for verification
+   (test resident, test account, issued cert, request, correction) were removed after testing.
+
+D-21. **Resident account linking made optional (user decision).** The User Management page no
+   longer requires (or offers) linking a resident record to a resident account. Backend no
+   longer requires `residentRef` on create. Note the consequence: a resident account without a
+   linked record can sign in and change its password but cannot access /api/me/* (profile,
+   requests, issued documents, corrections) — those endpoints require a linked resident. Linking
+   can still be set via the API (`residentRef`) by an administrator if the barangay wants
+   self-service for specific residents; UI support for linking was removed per user request.

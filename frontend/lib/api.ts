@@ -3,6 +3,7 @@ export interface ApiUser {
   username: string;
   fullName: string;
   role: 'resident' | 'secretary' | 'treasurer' | 'captain' | 'other';
+  residentRef?: string | null;
   isActive?: boolean;
   mustChangePassword?: boolean;
   lastLoginAt?: string | null;

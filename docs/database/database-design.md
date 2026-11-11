@@ -93,7 +93,7 @@ ObjectIds; statuses are string enums; avoid duplicating resident personal data �
 ### systemSettings
 - Singleton (`key: 'barangay'`): `barangayName`, `municipality`, `province`, `captainName`,
   `contactNumber`, `letterhead` (logo path/text), `controlNumberScheme` (default
-  `ABIS-YYYY-00000`), `smsEnabled` (default false).
+  `ABIS-YYYY-#####`), `smsEnabled` (default false).
 
 ### backupLogs
 - `filename`, `path`, `sizeBytes`, `createdBy` (ref users), `createdAt`, `status`
@@ -116,3 +116,36 @@ activityLogs.user ──────────► users       notifications.us
 - Deletion policy: archive (status='archived') for residents/households; hard delete only for
   test data; users deactivated, not deleted.
 - All monetary fields are Numbers in PHP (Philippine pesos), min 0.
+
+## Sample documents
+
+users:
+```json
+{ "username":"secretary", "fullName":"Barangay Secretary", "role":"secretary", "isActive":true, "mustChangePassword":true }
+```
+
+residents:
+```json
+{ "firstName":"Juan", "lastName":"Dela Cruz", "birthdate":"1990-04-01", "sex":"M", "civilStatus":"married", "purok":"Purok 1", "classifications":["senior_citizen"], "status":"active" }
+```
+
+households:
+```json
+{ "householdNumber":"HH-0001", "headResident":"<residents._id>", "purok":"Purok 1", "members":["<residents._id>"], "status":"active" }
+```
+
+certificateRequests:
+```json
+{ "resident":"<residents._id>", "certificateType":"<certificateTypes._id>", "purpose":"Employment", "status":"pending" }
+```
+
+## Indexing strategy
+
+- users: unique { username: 1 } ; { role: 1, isActive: 1 }
+- residents: { lastName:1, firstName:1 } ; { purok:1 } ; { status:1 } ; { classifications:1 } ; non-unique dup-check { lastName:1, firstName:1, birthdate:1 }
+- households: unique { householdNumber: 1 } ; { headResident: 1 } ; { purok: 1 }
+- certificateRequests: { resident:1, createdAt:-1 } ; { status:1 } ; unique sparse { controlNumber: 1 }
+- issuedCertificates: unique { controlNumber: 1 } ; { resident: 1, issuedAt: -1 }
+- payments: { issuedCertificate: 1 } ; { resident: 1, recordedAt: -1 }
+- activityLogs: { createdAt: -1 } ; { user: 1, createdAt: -1 } ; { action: 1 }
+- serviceRecords: { resident: 1, serviceDate: -1 } ; { category: 1 } ; { serviceDate: -1 }

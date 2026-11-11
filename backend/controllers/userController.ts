@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import { User } from '../models/User';
+import { Resident } from '../models/Resident';
 import { logActivity } from '../services/activityLogService';
 
 function publicUser(user: {
@@ -11,7 +12,7 @@ function publicUser(user: {
   role: string;
   isActive: boolean;
   mustChangePassword: boolean;
-  residentRef?: Types.ObjectId | null;
+  residentRef?: { toString(): string } | null | undefined;
   lastLoginAt?: Date | null;
   createdAt?: Date;
 }) {
@@ -22,7 +23,7 @@ function publicUser(user: {
     role: user.role,
     isActive: user.isActive,
     mustChangePassword: user.mustChangePassword,
-    residentRef: user.residentRef ?? null,
+    residentRef: user.residentRef ? String(user.residentRef) : null,
     lastLoginAt: user.lastLoginAt ?? null,
     createdAt: user.createdAt ?? null,
   };
@@ -68,8 +69,25 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  if (role === 'resident' && !residentRef) {
-    res.status(400).json({ success: false, message: 'residentRef is required when role is "resident"' });
+  let residentObjectId: Types.ObjectId | undefined;
+  if (role === 'resident') {
+    if (!residentRef) {
+      res.status(400).json({ success: false, message: 'residentRef is required when role is "resident"' });
+      return;
+    }
+    const resident = await Resident.findById(residentRef);
+    if (!resident) {
+      res.status(400).json({ success: false, message: 'Linked resident not found' });
+      return;
+    }
+    const taken = await User.findOne({ residentRef: resident._id });
+    if (taken) {
+      res.status(409).json({ success: false, message: 'That resident already has a login account' });
+      return;
+    }
+    residentObjectId = resident._id as Types.ObjectId;
+  } else if (residentRef) {
+    res.status(400).json({ success: false, message: 'residentRef may only be set when role is "resident"' });
     return;
   }
 
@@ -79,7 +97,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     fullName,
     passwordHash,
     role,
-    residentRef: residentRef ? new Types.ObjectId(residentRef) : undefined,
+    residentRef: residentObjectId,
     mustChangePassword: true,
     createdBy: req.user?.id,
   });
@@ -89,7 +107,7 @@ export async function createUser(req: Request, res: Response): Promise<void> {
     action: 'user.create',
     targetType: 'user',
     targetId: String(user._id),
-    details: { username, role },
+    details: { username, role, residentRef: residentObjectId ? String(residentObjectId) : undefined },
     ip: req.ip,
   });
 
@@ -124,12 +142,36 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  const nextRole = (role ?? user.role) as typeof user.role;
+  if (nextRole === 'resident') {
+    const targetRef = residentRef !== undefined ? residentRef : user.residentRef ? String(user.residentRef) : null;
+    if (!targetRef) {
+      res.status(400).json({ success: false, message: 'A resident account must be linked to a resident record (residentRef)' });
+      return;
+    }
+    const resident = await Resident.findById(targetRef);
+    if (!resident) {
+      res.status(400).json({ success: false, message: 'Linked resident not found' });
+      return;
+    }
+    const taken = await User.findOne({ residentRef: resident._id, _id: { $ne: user._id } });
+    if (taken) {
+      res.status(409).json({ success: false, message: 'That resident already has a login account' });
+      return;
+    }
+    user.residentRef = resident._id as Types.ObjectId;
+  } else if (residentRef === null) {
+    user.residentRef = undefined;
+  } else if (residentRef) {
+    res.status(400).json({ success: false, message: 'residentRef may only be set for resident accounts' });
+    return;
+  } else if (role && role !== 'resident' && user.role === 'resident') {
+    user.residentRef = undefined;
+  }
+
   if (fullName !== undefined) user.fullName = fullName;
   if (role !== undefined) user.role = role as typeof user.role;
   if (isActive !== undefined) user.isActive = isActive;
-  if (residentRef !== undefined) {
-    user.residentRef = residentRef ? new Types.ObjectId(residentRef) : undefined;
-  }
 
   await user.save();
 

@@ -1,0 +1,12 @@
+graph TD
+    Client[Browser - Next.js App Router]
+    Client -->|HTTPS, HTTP-only cookie| API[Express REST API]
+    API --> Helmet[helmet] --> Cors[cors allowlist] --> RL[rate limit on /api/auth] --> AuthN[authenticate] --> AuthZ[authorize] --> Val[Zod validation] --> Ctrl[Controllers]
+    Ctrl --> Svc[Services]
+    Svc --> DB[(MongoDB - Mongoose)]
+    Svc --> ActLog[ActivityLog collection]
+    Ctrl --> PDF[pdfkit: certificates/reports]
+    Ctrl --> XLS[ExcelJS: import/export]
+    API --> Backup[Backup service - JSON export/import]
+    Backup --> DB
+    Backup --> BLogs[backupLogs collection]
