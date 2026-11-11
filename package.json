@@ -1,0 +1,23 @@
+{
+  "name": "abis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ABIS - Integrated Barangay Information System for Barangay Ambucao",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm -w backend run dev\" \"npm -w frontend run dev\"",
+    "dev:backend": "npm -w backend run dev",
+    "dev:frontend": "npm -w frontend run dev",
+    "build": "npm -w backend run build && npm -w frontend run build",
+    "start": "npm -w backend run start",
+    "seed": "npm -w backend run seed",
+    "typecheck": "npm -w backend run typecheck && npm -w frontend run typecheck",
+    "lint": "npm -w backend run lint && npm -w frontend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
