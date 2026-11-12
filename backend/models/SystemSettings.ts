@@ -8,6 +8,8 @@ export interface ISystemSettings extends Document {
   captainName?: string;
   contactNumber?: string;
   letterheadText?: string;
+  officeHours?: string;
+  announcement?: string;
   controlNumberScheme: string;
   smsEnabled: boolean;
 }
@@ -21,6 +23,8 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
     captainName: { type: String, trim: true, maxlength: 128 },
     contactNumber: { type: String, trim: true, maxlength: 64 },
     letterheadText: { type: String, trim: true, maxlength: 1024 },
+    officeHours: { type: String, trim: true, maxlength: 128 },
+    announcement: { type: String, trim: true, maxlength: 1024 },
     controlNumberScheme: { type: String, trim: true, default: 'ABIS-YYYY-#####', maxlength: 64 },
     smsEnabled: { type: Boolean, default: false },
   },

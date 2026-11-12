@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const loginSchema = z.object({
   username: z.string().trim().min(3, 'Username must be at least 3 characters').max(64),
   password: z.string().min(1, 'Password is required').max(128),
+  remember: z.boolean().optional(),
 });
 
 export const createUserSchema = z.object({

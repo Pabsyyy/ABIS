@@ -24,6 +24,8 @@ router.patch('/settings', authorize('secretary'), validateBody(z.object({
   captainName: z.string().trim().max(128).optional(),
   contactNumber: z.string().trim().max(64).optional(),
   letterheadText: z.string().trim().max(1024).optional(),
+  officeHours: z.string().trim().max(128).optional().or(z.literal('')),
+  announcement: z.string().trim().max(1024).optional().or(z.literal('')),
   controlNumberScheme: z.string().trim().min(4).max(64).optional(),
 })), updateSettings);
 

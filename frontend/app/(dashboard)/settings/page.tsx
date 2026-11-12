@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/select';
+import { Field, Textarea } from '@/components/ui/select';
 import { Loader2, Save, DatabaseBackup, History, KeyRound, AlertTriangle } from 'lucide-react';
 
 interface SettingsData {
@@ -16,6 +16,8 @@ interface SettingsData {
   captainName?: string;
   contactNumber?: string;
   letterheadText?: string;
+  officeHours?: string;
+  announcement?: string;
   controlNumberScheme: string;
   smsEnabled: boolean;
 }
@@ -160,6 +162,8 @@ export default function SettingsPage() {
               <Field label="Contact number"><Input value={settings.contactNumber ?? ''} onChange={(e) => setSettings({ ...settings, contactNumber: e.target.value })} /></Field>
               <Field label="Control number scheme"><Input value={settings.controlNumberScheme} onChange={(e) => setSettings({ ...settings, controlNumberScheme: e.target.value })} /></Field>
               <div className="sm:col-span-2"><Field label="Letterhead text"><Input value={settings.letterheadText ?? ''} onChange={(e) => setSettings({ ...settings, letterheadText: e.target.value })} placeholder="e.g. Office of the Punong Barangay" /></Field></div>
+              <div className="sm:col-span-2"><Field label="Office hours"><Input value={settings.officeHours ?? ''} onChange={(e) => setSettings({ ...settings, officeHours: e.target.value })} placeholder="e.g. Monday to Friday, 8:00 AM – 5:00 PM" /></Field></div>
+              <div className="sm:col-span-2"><Field label="Announcement for residents"><Textarea value={settings.announcement ?? ''} onChange={(e) => setSettings({ ...settings, announcement: e.target.value })} placeholder="Shown on every resident's home page until you clear this field." /></Field></div>
               <div className="sm:col-span-2 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2">
                 <span className="text-xs text-amber-800">SMS integration is a disabled placeholder (Semaphore). It cannot send messages until officially enabled.</span>
               </div>

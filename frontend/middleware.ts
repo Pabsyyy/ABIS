@@ -12,6 +12,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/users') ||
     request.nextUrl.pathname.startsWith('/logs') ||
     request.nextUrl.pathname.startsWith('/me') ||
+    request.nextUrl.pathname.startsWith('/home') ||
     request.nextUrl.pathname.startsWith('/my-requests') ||
     request.nextUrl.pathname.startsWith('/corrections') ||
     request.nextUrl.pathname.startsWith('/settings');
@@ -25,5 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/residents/:path*', '/households/:path*', '/certificates/:path*', '/services/:path*', '/reports/:path*', '/users/:path*', '/logs/:path*', '/corrections/:path*', '/me/:path*', '/my-requests/:path*', '/settings/:path*'],
+  matcher: ['/dashboard/:path*', '/home/:path*', '/residents/:path*', '/households/:path*', '/certificates/:path*', '/services/:path*', '/reports/:path*', '/users/:path*', '/logs/:path*', '/corrections/:path*', '/me/:path*', '/my-requests/:path*', '/settings/:path*'],
 };

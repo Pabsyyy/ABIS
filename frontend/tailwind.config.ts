@@ -20,6 +20,7 @@ const config: Config = {
       borderRadius: { lg: '0.75rem', md: '0.5rem', sm: '0.375rem' },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        poppins: ['var(--font-poppins)', 'Poppins', 'Segoe UI', 'sans-serif'],
       },
     },
   },

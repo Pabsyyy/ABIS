@@ -26,7 +26,7 @@ export async function getSettings(_req: Request, res: Response): Promise<void> {
 
 export async function updateSettings(req: Request, res: Response): Promise<void> {
   const settings = await getSettingsSingleton();
-  const allowed = ['barangayName', 'municipality', 'province', 'captainName', 'contactNumber', 'letterheadText', 'controlNumberScheme'] as const;
+  const allowed = ['barangayName', 'municipality', 'province', 'captainName', 'contactNumber', 'letterheadText', 'officeHours', 'announcement', 'controlNumberScheme'] as const;
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
       (settings as unknown as Record<string, unknown>)[key] = req.body[key];

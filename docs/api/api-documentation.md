@@ -7,7 +7,7 @@ Auth via HTTP-only cookie `abis_token`.
 ## Auth
 | Method | Path | Roles | Description |
 |---|---|---|---|
-| POST | /auth/login | public (rate-limited) | Login; sets cookie |
+| POST | /auth/login | public (rate-limited) | Login `{username, password, remember?: boolean}`; sets cookie (30-day when remember=true, session otherwise) |
 | POST | /auth/logout | any auth | Logout; clears cookie |
 | GET | /auth/me | any auth | Current user |
 

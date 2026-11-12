@@ -2,11 +2,12 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2, Menu } from 'lucide-react';
 import { api, type ApiUser } from '@/lib/api';
 import { Sidebar } from '@/components/sidebar';
 
 const breadcrumbLabels: Record<string, string> = {
+  home: 'Home',
   me: 'My Profile',
   'my-requests': 'My Requests',
   corrections: 'Correction Requests',
@@ -20,6 +21,8 @@ const breadcrumbLabels: Record<string, string> = {
   logs: 'Activity Logs',
   settings: 'Settings',
 };
+
+const COLLAPSE_KEY = 'abis.sidebarCollapsed';
 
 function Breadcrumbs() {
   const pathname = usePathname();
@@ -41,8 +44,11 @@ function Breadcrumbs() {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<ApiUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +66,31 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     };
   }, [router]);
 
+  useEffect(() => {
+    setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === '1');
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      return next;
+    });
+  };
+
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -70,9 +101,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar user={user} />
+      {mobileOpen && (
+        <div className="fixed inset-0 z-30 bg-primary/40 backdrop-blur-[2px] lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
+      )}
+      <Sidebar
+        user={user}
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        onToggleCollapse={toggleCollapse}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center border-b border-border bg-white px-6">
+        <header className="flex h-14 items-center gap-3 border-b border-border bg-white px-6">
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+            aria-expanded={mobileOpen}
+            className="rounded-md p-1.5 text-muted hover:bg-background-light hover:text-foreground lg:hidden"
+          >
+            <Menu size={20} />
+          </button>
           <Breadcrumbs />
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

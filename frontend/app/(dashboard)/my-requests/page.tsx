@@ -1,21 +1,14 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
-import { Field, Select, Textarea, Badge } from '@/components/ui/select';
+import { Badge } from '@/components/ui/select';
 import { PageHeader } from '@/components/ui/page-header';
+import { CertificateRequestModal } from '@/components/certificate-request-modal';
 import { Loader2, Plus, Printer } from 'lucide-react';
-
-interface CertificateTypeRow {
-  _id: string;
-  name: string;
-  fee: number;
-  active: boolean;
-}
 
 interface MyRequestRow {
   _id: string;
@@ -49,21 +42,16 @@ export default function MyRequestsPage() {
   const router = useRouter();
   const [requests, setRequests] = useState<MyRequestRow[]>([]);
   const [issued, setIssued] = useState<MyIssuedRow[]>([]);
-  const [types, setTypes] = useState<CertificateTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
-  const [certificateType, setCertificateType] = useState('');
-  const [purpose, setPurpose] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [reqRes, issuedRes, typesRes] = await Promise.all([
+    const [reqRes, issuedRes] = await Promise.all([
       api<MyRequestRow[]>('/api/me/certificate-requests'),
       api<MyIssuedRow[]>('/api/me/issued'),
-      api<CertificateTypeRow[]>('/api/certificates/types'),
     ]);
     if (reqRes.message === 'Not authenticated') {
       router.replace('/login');
@@ -80,7 +68,6 @@ export default function MyRequestsPage() {
       setRequests(reqRes.data ?? []);
     }
     if (issuedRes.success && issuedRes.data) setIssued(issuedRes.data);
-    if (typesRes.success && typesRes.data) setTypes(typesRes.data.filter((t) => t.active));
     setLoading(false);
   }, [router, setError]);
 
@@ -88,24 +75,9 @@ export default function MyRequestsPage() {
     void load();
   }, [load]);
 
-  const submitRequest = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSaving(true);
-    const res = await api('/api/me/certificate-requests', {
-      method: 'POST',
-      body: JSON.stringify({ certificateType, purpose }),
-    });
-    setSaving(false);
-    if (!res.success) {
-      setError(res.message ?? 'Failed to submit request');
-      return;
-    }
-    setNotice('Request submitted. The Captain will review it — track its status here.');
-    setNewOpen(false);
-    setCertificateType('');
-    setPurpose('');
-    await load();
+  const handleSubmitted = (message: string) => {
+    setNotice(message);
+    void load();
   };
 
   return (
@@ -180,21 +152,7 @@ export default function MyRequestsPage() {
         </CardContent>
       </Card>
 
-      <Modal open={newOpen} onClose={() => setNewOpen(false)} title="New Request" description="Your request goes to the Barangay Captain for approval. You will be notified of the outcome.">
-        <form onSubmit={submitRequest} className="flex flex-col gap-4">
-          <Field label="Certificate type *">
-            <Select required value={certificateType} onChange={(e) => setCertificateType(e.target.value)}>
-              <option value="">Select certificate type…</option>
-              {types.map((t) => <option key={t._id} value={t._id}>{t.name} — PHP {t.fee.toFixed(2)}</option>)}
-            </Select>
-          </Field>
-          <Field label="Purpose *"><Textarea required value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Employment, scholarship…" /></Field>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || !certificateType || purpose.trim().length < 3}>{saving && <Loader2 size={16} className="animate-spin" />}Submit request</Button>
-          </div>
-        </form>
-      </Modal>
+      <CertificateRequestModal open={newOpen} onClose={() => setNewOpen(false)} onSubmitted={handleSubmitted} />
     </div>
   );
 }

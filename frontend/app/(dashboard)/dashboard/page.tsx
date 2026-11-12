@@ -32,7 +32,7 @@ export default function DashboardPage() {
   useEffect(() => {
     api<{ user: { role: string } }>('/api/auth/me').then((res) => {
       if (res.success && res.data?.user.role === 'resident') {
-        router.replace('/my-requests');
+        router.replace('/home');
         return;
       }
       api<Summary>('/api/dashboard/summary').then((summaryRes) => {

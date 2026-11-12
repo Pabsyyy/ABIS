@@ -109,3 +109,15 @@ D-21. **Resident account linking made optional (user decision).** The User Manag
    requests, issued documents, corrections) — those endpoints require a linked resident. Linking
    can still be set via the API (`residentRef`) by an administrator if the barangay wants
    self-service for specific residents; UI support for linking was removed per user request.
+
+D-22. **Resident account linking restored (user decision, supersedes D-21).** User Management
+   again requires a `residentRef` for role=resident on create and update; the create form
+   includes a resident picker and each resident row offers a Link/Change-link modal. Existing
+   unlinked accounts (e.g. `denver`) can be linked once a resident record exists. Backend
+   rejects resident accounts without a link and enforces one account per resident record.
+
+D-23. **Login session policy (user decision).** The redesigned login page (matching LOGIN.png)
+   offers a functional "Remember me": checked → 30-day JWT + 30-day HTTP-only cookie; unchecked
+   → session cookie with the default JWT_EXPIRES_IN (12h). "Forgot Password?" opens a
+   modal instructing the user to contact the Barangay Secretary (no email/SMS reset channel).
+   Login redirects residents to /my-requests and staff to a validated ?next path or /dashboard.

@@ -2,11 +2,11 @@
 
 Design system: Tailwind + approved palette (primary #0B2A4A, secondary #082544, accent #1469D4 / #1677E8, background #F5F9FD, light #EAF4FF, white #FFFFFF, text #163B63, muted #64748B, border #D9E6F2, success #16A765, warning #F59E0B). shadcn/ui-style components (Button, Input, Select, Card, Dialog, Table). Lucide icons. GSAP limited to: login card entrance, dashboard card stagger, sidebar slide, modal entrance — never >300ms, never blocking.
 
-Shell (all authenticated pages): fixed left sidebar (w-64, role-aware nav) + top bar (breadcrumb, barangay name, notification badge) + content area (max-w-7xl, p-6). Desktop-first; tablet-safe (sidebar collapsible to icons ≤1024px; content stacks ≤768px). No separate mobile app.
+Shell (all authenticated pages): fixed left sidebar (w-64, role-aware nav) + top bar (breadcrumb, barangay name, notification badge) + content area (max-w-7xl, p-6). Desktop-first; tablet-safe: the sidebar collapses to an icon-only rail (lg+, tooltips on icons, state persisted in localStorage) and becomes an off-canvas drawer opened by a header hamburger below lg (backdrop, closes on Escape/nav/backdrop); content stacks ≤768px. No separate mobile app.
 
 Per-page definition:
 
-**Login** — Centered card on navy background; resident-hall disclaimer; username + password (show/hide toggle); client validation (Zod) + server errors shown inline; rate-limit message on 429; loading state on submit.
+**Login** — Split screen matching LOGIN.png: left 55% panel (barangay coastal photo `LOGINBG.jpg` with navy overlay + Municipality of Santiago seal + "Barangay Ambucao", subtitle, description, 4 feature blocks, copyright) hidden below lg; right 45% light panel (#EEF3FA) with a centered white card (blue lock badge, "Welcome Back!", "Please login to your account and continue", labeled username/password with show/hide eye, Remember me checkbox + Forgot Password? link opening a contact-the-Secretary modal, full-width blue Login button, "For Authorized Personnel Only" below). Responsive: single-column card below lg with seal branding header; stacked padding at sm. Poppins font; GSAP card entrance 300ms; Zod validation + inline server errors; rate-limit message on 429; loading state; role-based redirect after login (resident → /my-requests, staff → validated ?next or /dashboard). Remember me = 30-day session cookie (checked) or session cookie with 12h token (unchecked).
 
 **Dashboard** — Stat cards row (residents, households, pending approvals, issued this month) + Recharts: sex distribution (donut), age groups (bar), purok distribution (bar), request trend (area). Quick links to modules. Loading skeletons; empty state ("No residents yet" with CTA to add).
 

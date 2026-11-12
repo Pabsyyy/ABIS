@@ -9,6 +9,7 @@ import { User } from '../models/User';
 import { logActivity } from '../services/activityLogService';
 import { generateControlNumber, getSettingsSingleton } from '../services/controlNumberService';
 import { certificatePdfBuffer } from '../services/pdfService';
+import { notifyResident } from '../services/notificationService';
 import { Types } from 'mongoose';
 
 export async function listRequests(req: Request, res: Response): Promise<void> {
@@ -137,6 +138,12 @@ export async function approveRequest(req: Request, res: Response): Promise<void>
   );
 
   await logActivity({ user: req.user?.id, action: 'certificate_request.approve', targetType: 'certificateRequest', targetId: String(request._id), ip: req.ip });
+  await notifyResident(request.resident, {
+    title: 'Certificate request approved',
+    message: 'Your certificate request was approved. Please wait for issuance and pickup instructions.',
+    type: 'approval',
+    link: '/my-requests',
+  });
   res.json({ success: true, data: request });
 }
 
@@ -157,6 +164,12 @@ export async function rejectRequest(req: Request, res: Response): Promise<void> 
   request.approvedAt = new Date();
   await request.save();
   await logActivity({ user: req.user?.id, action: 'certificate_request.reject', targetType: 'certificateRequest', targetId: String(request._id), details: { reason }, ip: req.ip });
+  await notifyResident(request.resident, {
+    title: 'Certificate request rejected',
+    message: `Your certificate request was rejected. Reason: ${reason}`,
+    type: 'alert',
+    link: '/my-requests',
+  });
   res.json({ success: true, data: request });
 }
 
@@ -194,6 +207,12 @@ export async function issueRequest(req: Request, res: Response): Promise<void> {
   await request.save();
 
   await logActivity({ user: req.user?.id, action: 'certificate_request.issue', targetType: 'issuedCertificate', targetId: String(issued._id), details: { controlNumber }, ip: req.ip });
+  await notifyResident(residentDoc._id, {
+    title: 'Certificate ready for pickup',
+    message: `Your ${typeDoc.name} is ready for pickup. Control No. ${controlNumber}.`,
+    type: 'approval',
+    link: '/my-requests',
+  });
   res.status(201).json({ success: true, data: issued });
 }
 
@@ -249,6 +268,12 @@ export async function releaseRequest(req: Request, res: Response): Promise<void>
   request.status = 'released';
   await request.save();
   await logActivity({ user: req.user?.id, action: 'certificate_request.release', targetType: 'issuedCertificate', targetId: String(issued._id), details: { releasedTo }, ip: req.ip });
+  await notifyResident(request.resident, {
+    title: 'Certificate released',
+    message: `Your ${issued.controlNumber} certificate was marked as released.`,
+    type: 'info',
+    link: '/my-requests',
+  });
   res.json({ success: true, data: issued });
 }
 

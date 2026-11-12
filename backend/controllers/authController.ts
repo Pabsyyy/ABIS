@@ -6,22 +6,23 @@ import { User } from '../models/User';
 import { logActivity } from '../services/activityLogService';
 import { AuthTokenPayload } from '../middleware/auth';
 
-function signToken(payload: AuthTokenPayload): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions);
+function signToken(payload: AuthTokenPayload, remember: boolean): string {
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: remember ? '30d' : env.jwtExpiresIn } as jwt.SignOptions);
 }
 
-function setAuthCookie(res: Response, token: string): void {
+function setAuthCookie(res: Response, token: string, remember: boolean): void {
   res.cookie(env.cookieName, token, {
     httpOnly: true,
     secure: env.isProduction,
     sameSite: 'lax',
     path: '/',
-    maxAge: 12 * 60 * 60 * 1000,
+    ...(remember ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
   });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
-  const { username, password } = req.body as { username: string; password: string };
+  const { username, password, remember } = req.body as { username: string; password: string; remember?: boolean };
+  const rememberMe = remember === true;
 
   const user = await User.findOne({ username }).select('+passwordHash');
   const valid = user ? await bcrypt.compare(password, user.passwordHash) : false;
@@ -41,10 +42,10 @@ export async function login(req: Request, res: Response): Promise<void> {
   user.lastLoginAt = new Date();
   await user.save();
 
-  const token = signToken({ sub: String(user._id), role: user.role });
-  setAuthCookie(res, token);
+  const token = signToken({ sub: String(user._id), role: user.role }, rememberMe);
+  setAuthCookie(res, token, rememberMe);
 
-  await logActivity({ user: user._id, action: 'auth.login', ip: req.ip });
+  await logActivity({ user: user._id, action: 'auth.login', ip: req.ip, details: { remember: rememberMe } });
 
   res.json({
     success: true,

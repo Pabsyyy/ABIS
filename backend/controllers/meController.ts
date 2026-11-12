@@ -11,6 +11,7 @@ import { User } from '../models/User';
 import { logActivity } from '../services/activityLogService';
 import { getSettingsSingleton } from '../services/controlNumberService';
 import { certificatePdfBuffer } from '../services/pdfService';
+import { notifyResident } from '../services/notificationService';
 
 const CORRECTABLE_FIELDS = ['contactNumber', 'email', 'address', 'purok', 'occupation', 'monthlyIncome', 'civilStatus', 'suffix'] as const;
 
@@ -230,6 +231,12 @@ export async function applyCorrectionRequest(req: Request, res: Response): Promi
   await correction.save();
 
   await logActivity({ user: req.user?.id, action: 'correction_request.apply', targetType: 'correctionRequest', targetId: String(correction._id), details: { field: correction.field }, ip: req.ip });
+  await notifyResident(correction.resident, {
+    title: 'Correction request applied',
+    message: `Your requested correction of "${correction.field}" has been applied to your record.`,
+    type: 'approval',
+    link: '/me',
+  });
   res.json({ success: true, data: correction });
 }
 
@@ -251,5 +258,81 @@ export async function rejectCorrectionRequest(req: Request, res: Response): Prom
   await correction.save();
 
   await logActivity({ user: req.user?.id, action: 'correction_request.reject', targetType: 'correctionRequest', targetId: String(correction._id), details: { field: correction.field }, ip: req.ip });
+  await notifyResident(correction.resident, {
+    title: 'Correction request rejected',
+    message: `Your requested correction of "${correction.field}" was rejected.${correction.resolutionNote ? ` Note: ${correction.resolutionNote}` : ''}`,
+    type: 'alert',
+    link: '/me',
+  });
   res.json({ success: true, data: correction });
+}
+
+export async function getMyOverview(req: Request, res: Response): Promise<void> {
+  const residentId = requireResident(req, res);
+  if (!residentId) return;
+
+  const resident = await Resident.findById(residentId).lean();
+  if (!resident) {
+    res.status(404).json({ success: false, message: 'Your resident record was not found. Please visit the Barangay Hall.' });
+    return;
+  }
+
+  const [recentRequests, recentIssued, recentCorrections, notifications, unread, settings, certificateTypes] = await Promise.all([
+    CertificateRequest.find({ resident: residentId }).populate('certificateType', 'name fee').sort({ createdAt: -1 }).limit(5).lean(),
+    IssuedCertificate.find({ resident: residentId }).populate('certificateType', 'name').sort({ issuedAt: -1 }).limit(5).lean(),
+    CorrectionRequest.find({ resident: residentId }).sort({ createdAt: -1 }).limit(5).lean(),
+    Notification.find({ user: req.user?.id }).sort({ createdAt: -1 }).limit(10).lean(),
+    Notification.countDocuments({ user: req.user?.id, read: false }),
+    getSettingsSingleton(),
+    CertificateType.find({ active: true }).select('name description fee requiresApproval').sort({ name: 1 }).lean(),
+  ]);
+
+  const [pending, approved, readyForPickup, issued, openCorrections] = await Promise.all([
+    CertificateRequest.countDocuments({ resident: residentId, status: 'pending' }),
+    CertificateRequest.countDocuments({ resident: residentId, status: 'approved' }),
+    CertificateRequest.countDocuments({ resident: residentId, status: 'ready_for_release' }),
+    IssuedCertificate.countDocuments({ resident: residentId }),
+    CorrectionRequest.countDocuments({ resident: residentId, status: 'pending' }),
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      profile: resident,
+      barangay: {
+        barangayName: settings.barangayName,
+        municipality: settings.municipality,
+        province: settings.province,
+        captainName: settings.captainName,
+        contactNumber: settings.contactNumber,
+        officeHours: settings.officeHours,
+        announcement: settings.announcement,
+      },
+      stats: { pending, approved, readyForPickup, issued, openCorrections },
+      latestRequest: recentRequests[0] ?? null,
+      recentRequests,
+      recentIssued,
+      recentCorrections,
+      notifications: { items: notifications, unread },
+      certificateTypes,
+    },
+  });
+}
+
+export async function listMyNotifications(req: Request, res: Response): Promise<void> {
+  const [notifications, unread] = await Promise.all([
+    Notification.find({ user: req.user?.id }).sort({ createdAt: -1 }).limit(30).lean(),
+    Notification.countDocuments({ user: req.user?.id, read: false }),
+  ]);
+  res.json({ success: true, data: { notifications, unread } });
+}
+
+export async function markMyNotificationRead(req: Request, res: Response): Promise<void> {
+  await Notification.updateOne({ _id: req.params.id, user: req.user?.id }, { $set: { read: true } });
+  res.json({ success: true, message: 'Notification marked as read' });
+}
+
+export async function markAllMyNotificationsRead(req: Request, res: Response): Promise<void> {
+  await Notification.updateMany({ user: req.user?.id }, { $set: { read: true } });
+  res.json({ success: true, message: 'All notifications marked as read' });
 }
