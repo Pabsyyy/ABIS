@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/select';
@@ -44,7 +45,6 @@ export default function MyRequestsPage() {
   const [issued, setIssued] = useState<MyIssuedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -63,20 +63,20 @@ export default function MyRequestsPage() {
       return;
     }
     if (!reqRes.success) {
-      setError(reqRes.message ?? 'Failed to load your requests');
+      notify.error(reqRes.message ?? 'Failed to load your requests');
     } else {
       setRequests(reqRes.data ?? []);
     }
     if (issuedRes.success && issuedRes.data) setIssued(issuedRes.data);
     setLoading(false);
-  }, [router, setError]);
+  }, [router]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const handleSubmitted = (message: string) => {
-    setNotice(message);
+    notify.success(message);
     void load();
   };
 
@@ -85,7 +85,6 @@ export default function MyRequestsPage() {
       <PageHeader title="My Requests" description="Certificate and document requests you submitted at the Barangay Hall (or from here, if enabled)." actions={<Button size="sm" onClick={() => setNewOpen(true)}><Plus size={16} /> New Request</Button>} />
 
       {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <Card>
         <CardContent className="p-0">

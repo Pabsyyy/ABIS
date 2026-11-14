@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, RefreshCw, ShieldCheck, ShieldOff, KeyRound, Link2 } from 'lucide-react';
 import { api, type ApiUser, type ApiResponse } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,8 +31,6 @@ export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [fullName, setFullName] = useState('');
@@ -49,14 +48,13 @@ export default function UsersPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const res: ApiResponse<ApiUser[]> = await api('/api/users');
     if (res.message === 'Not authenticated' || (!res.success && res.message?.includes('permission'))) {
       router.replace('/dashboard');
       return;
     }
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load users. You must be the Barangay Secretary.');
+      notify.error(res.message ?? 'Failed to load users. You must be the Barangay Secretary.');
       setLoading(false);
       return;
     }
@@ -107,14 +105,13 @@ export default function UsersPage() {
   const linkAccount = async () => {
     if (!linkUser || !linkRef) return;
     setLinking(true);
-    setError(null);
     const res = await api(`/api/users/${linkUser.id}`, { method: 'PATCH', body: JSON.stringify({ residentRef: linkRef }) });
     setLinking(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to link account');
+      notify.error(res.message ?? 'Failed to link account');
       return;
     }
-    setNotice(`"${linkUser.username}" linked to resident record.`);
+    notify.success(`"${linkUser.username}" linked to resident record.`);
     setLinkUser(null);
     setLinkRef('');
     setLinkQuery('');
@@ -128,8 +125,6 @@ export default function UsersPage() {
 
   const createUser = async (e: FormEvent) => {
     e.preventDefault();
-    setNotice(null);
-    setError(null);
     setSubmitting(true);
     const res = await api('/api/users', {
       method: 'POST',
@@ -137,10 +132,10 @@ export default function UsersPage() {
     });
     setSubmitting(false);
     if (!res.success) {
-      setError(res.errors?.map((e2) => `${e2.field}: ${e2.message}`).join('; ') ?? res.message ?? 'Failed to create user');
+      notify.error(res.errors?.map((e2) => `${e2.field}: ${e2.message}`).join('; ') ?? res.message ?? 'Failed to create user');
       return;
     }
-    setNotice(`Account "${username}" created. The user must change the temporary password on first login.`);
+    notify.success(`Account "${username}" created. The user must change the temporary password on first login.`);
     setFullName('');
     setUsername('');
     setPassword('');
@@ -151,17 +146,15 @@ export default function UsersPage() {
   };
 
   const toggleActive = async (user: ApiUser) => {
-    setNotice(null);
-    setError(null);
     const res = await api(`/api/users/${user.id}`, {
       method: 'PATCH',
       body: JSON.stringify({ isActive: !user.isActive }),
     });
     if (!res.success) {
-      setError(res.message ?? 'Failed to update account');
+      notify.error(res.message ?? 'Failed to update account');
       return;
     }
-    setNotice(`Account "${user.username}" ${user.isActive ? 'deactivated' : 'reactivated'}.`);
+    notify.success(`Account "${user.username}" ${user.isActive ? 'deactivated' : 'reactivated'}.`);
     await load();
   };
 
@@ -173,10 +166,10 @@ export default function UsersPage() {
       body: JSON.stringify({ newPassword }),
     });
     if (!res.success) {
-      setError(res.message ?? 'Failed to reset password');
+      notify.error(res.message ?? 'Failed to reset password');
       return;
     }
-    setNotice(`Password for "${user.username}" reset. They must change it on next login.`);
+    notify.success(`Password for "${user.username}" reset. They must change it on next login.`);
   };
 
   return (
@@ -190,9 +183,6 @@ export default function UsersPage() {
           <RefreshCw size={16} /> Refresh
         </Button>
       </div>
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">

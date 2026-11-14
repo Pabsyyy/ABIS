@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Field, Select, Textarea, Badge } from '@/components/ui/select';
@@ -51,7 +52,6 @@ export default function MyProfilePage() {
   const [field, setField] = useState('contactNumber');
   const [proposedValue, setProposedValue] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const load = async () => {
@@ -60,7 +60,9 @@ export default function MyProfilePage() {
       api<CorrectionRow[]>('/api/me/correction-requests'),
     ]);
     if (!profileRes.success || !profileRes.data) {
-      setError(profileRes.message ?? 'Failed to load your profile. Please visit the Barangay Hall.');
+      const message = profileRes.message ?? 'Failed to load your profile. Please visit the Barangay Hall.';
+      setError(message);
+      notify.error(message);
       return;
     }
     setProfile(profileRes.data);
@@ -73,7 +75,6 @@ export default function MyProfilePage() {
 
   const submitCorrection = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSending(true);
     const res = await api('/api/me/correction-requests', {
       method: 'POST',
@@ -81,10 +82,10 @@ export default function MyProfilePage() {
     });
     setSending(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to submit correction request');
+      notify.error(res.message ?? 'Failed to submit correction request');
       return;
     }
-    setNotice('Correction request submitted. The Barangay Secretary will review it.');
+    notify.success('Correction request submitted. The Barangay Secretary will review it.');
     setProposedValue('');
     await load();
   };
@@ -96,7 +97,6 @@ export default function MyProfilePage() {
       <PageHeader title="My Profile" description="Your barangay record. Only the Barangay Secretary can apply changes." />
 
       {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       {profile && (
         <Card>

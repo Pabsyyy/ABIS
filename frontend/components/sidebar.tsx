@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, FileText, HandHeart, BarChart3, UserCog, ScrollText, Settings, LogOut, Landmark, UserRound, Home, ClipboardList, IdCard, ListChecks, Loader2, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, HandHeart, BarChart3, UserCog, ScrollText, Settings, LogOut, UserRound, Home, ClipboardList, IdCard, ListChecks, Loader2, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api, type ApiUser } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -60,7 +62,11 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
   const doLogout = async () => {
     setLoggingOut(true);
     try {
-      await api('/api/auth/logout', { method: 'POST' });
+      const res = await api('/api/auth/logout', { method: 'POST' });
+      if (!res.success) {
+        notify.error(res.message ?? 'Failed to sign out. Please try again.');
+        return;
+      }
       window.location.replace('/login');
     } finally {
       setLoggingOut(false);
@@ -73,17 +79,24 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
     <>
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col border-r border-secondary bg-primary text-white transition-[width,transform] duration-200 print:hidden lg:static lg:z-auto lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex h-dvh w-64 flex-col border-r border-secondary bg-primary text-white transition-[width,transform] duration-200 print:hidden lg:static lg:z-auto lg:translate-x-0',
         collapsed ? 'lg:w-20' : 'lg:w-64',
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       )}
     >
-      <div className={cn('flex items-center justify-between border-b border-white/10 px-5 py-4', collapsed && 'lg:justify-center lg:px-2')}>
+      <div className={cn('flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4', collapsed && 'lg:justify-center lg:px-2')}>
         <div className="flex items-center gap-2">
-          <Landmark size={22} className="shrink-0 text-accent-light" />
+          <Image
+            src="/images/santiago-seal.png"
+            alt="Barangay Ambucao seal"
+            width={36}
+            height={36}
+            priority
+            className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-white/25 sm:h-9 sm:w-9"
+          />
           <div className={cn('leading-tight', collapsed && 'lg:hidden')}>
-            <p className="text-sm font-semibold">ABIS</p>
-            <p className="text-[11px] text-white/60">Barangay Ambucao</p>
+            <p className="text-base font-semibold">Barangay Ambucao</p>
+            <p className="text-xs text-white/60">Information System</p>
           </div>
         </div>
         <button onClick={onCloseMobile} aria-label="Close navigation" className="rounded-md p-1 text-white/70 hover:bg-white/10 hover:text-white lg:hidden">
@@ -91,8 +104,8 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
-        <ul className="flex flex-col gap-1">
+      <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5" aria-label="Main navigation">
+        <ul className="flex flex-col gap-1.5">
           {visibleItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -103,12 +116,12 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
                   title={collapsed ? label : undefined}
                   aria-label={label}
                   className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    'flex items-center gap-3 rounded-md px-3 py-2.5 text-base transition-colors',
                     collapsed && 'lg:justify-center lg:px-2',
                     active ? 'bg-accent text-white' : 'text-white/80 hover:bg-white/10 hover:text-white'
                   )}
                 >
-                  <Icon size={18} strokeWidth={1.75} className="shrink-0" />
+                  <Icon size={20} strokeWidth={1.75} className="shrink-0" />
                   <span className={cn(collapsed && 'lg:hidden')}>{label}</span>
                   {href === '/home' && unread > 0 && (
                     <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-amber-400" aria-label={`${unread} unread notifications`} />
@@ -120,25 +133,25 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
         </ul>
       </nav>
 
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-white/10 p-3.5">
         <button
           onClick={onToggleCollapse}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className={cn(
-            'mb-2 hidden w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white lg:flex',
+            'mb-2 hidden w-full items-center gap-3 rounded-md px-3 py-2.5 text-base text-white/80 transition-colors hover:bg-white/10 hover:text-white lg:flex',
             collapsed && 'lg:justify-center lg:px-2'
           )}
         >
-          {collapsed ? <PanelLeftOpen size={18} strokeWidth={1.75} /> : <PanelLeftClose size={18} strokeWidth={1.75} />}
+          {collapsed ? <PanelLeftOpen size={20} strokeWidth={1.75} /> : <PanelLeftClose size={20} strokeWidth={1.75} />}
           <span className={cn(collapsed && 'lg:hidden')}>{collapsed ? 'Expand' : 'Collapse'}</span>
         </button>
 
         <div className={cn('mb-2 flex items-center gap-2 rounded-md bg-white/5 px-3 py-2', collapsed && 'lg:justify-center lg:px-2')}>
-          <UserRound size={18} className="shrink-0 text-white/70" />
+          <UserRound size={20} className="shrink-0 text-white/70" />
           <div className={cn('min-w-0 leading-tight', collapsed && 'lg:hidden')}>
-            <p className="truncate text-xs font-medium text-white">{user.fullName}</p>
-            <p className="text-[11px] capitalize text-white/60">{user.role}</p>
+            <p className="truncate text-sm font-medium text-white">{user.fullName}</p>
+            <p className="text-xs capitalize text-white/60">{user.role}</p>
           </div>
         </div>
         <button
@@ -147,11 +160,11 @@ export function Sidebar({ user, collapsed, mobileOpen, onToggleCollapse, onClose
           title={collapsed ? 'Sign out' : undefined}
           aria-label="Sign out"
           className={cn(
-            'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50',
+            'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-base text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50',
             collapsed && 'lg:justify-center lg:px-2'
           )}
         >
-          <LogOut size={18} strokeWidth={1.75} className="shrink-0" />
+          <LogOut size={20} strokeWidth={1.75} className="shrink-0" />
           <span className={cn(collapsed && 'lg:hidden')}>{loggingOut ? 'Signing out…' : 'Sign out'}</span>
         </button>
       </div>

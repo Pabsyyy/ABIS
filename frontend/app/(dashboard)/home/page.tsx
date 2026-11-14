@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/select';
@@ -159,7 +160,6 @@ export default function ResidentHomePage() {
   const [loading, setLoading] = useState(true);
   const [unlinked, setUnlinked] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -178,6 +178,7 @@ export default function ResidentHomePage() {
         setUnlinked(true);
       } else {
         setError(res.message ?? 'Failed to load your dashboard.');
+        notify.error(res.message ?? 'Failed to load your dashboard.');
       }
       setLoading(false);
       return;
@@ -191,7 +192,11 @@ export default function ResidentHomePage() {
   }, [load]);
 
   const markRead = async (id: string) => {
-    await api(`/api/me/notifications/${id}/read`, { method: 'POST' });
+    const res = await api(`/api/me/notifications/${id}/read`, { method: 'POST' });
+    if (!res.success) {
+      notify.error(res.message ?? 'Failed to mark notification as read.');
+      return;
+    }
     setOverview((prev) => {
       if (!prev) return prev;
       const items = prev.notifications.items.map((n) => (n._id === id ? { ...n, read: true } : n));
@@ -202,7 +207,11 @@ export default function ResidentHomePage() {
   };
 
   const markAllRead = async () => {
-    await api('/api/me/notifications/read-all', { method: 'POST' });
+    const res = await api('/api/me/notifications/read-all', { method: 'POST' });
+    if (!res.success) {
+      notify.error(res.message ?? 'Failed to mark notifications as read.');
+      return;
+    }
     setOverview((prev) => (prev ? { ...prev, notifications: { items: prev.notifications.items.map((n) => ({ ...n, read: true })), unread: 0 } } : prev));
     window.dispatchEvent(new Event('abis:refresh-notifications'));
   };
@@ -213,7 +222,7 @@ export default function ResidentHomePage() {
   };
 
   const handleSubmitted = (message: string) => {
-    setNotice(message);
+    notify.success(message);
     void load();
   };
 
@@ -289,8 +298,6 @@ export default function ResidentHomePage() {
           </div>
         </div>
       )}
-
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[

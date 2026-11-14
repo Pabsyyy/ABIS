@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { gsap } from 'gsap';
 import { Award, BarChart3, Eye, EyeOff, IdCard, Loader2, Lock, LogIn, Settings2 } from 'lucide-react';
 import { api, type ApiUser } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,6 @@ const features = [
 export default function LoginPage() {
   const router = useRouter();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
@@ -53,14 +53,13 @@ export default function LoginPage() {
   }, []);
 
   const onSubmit = async (values: LoginValues) => {
-    setServerError(null);
     const res = await api<{ user: ApiUser }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: values.username, password: values.password, remember: Boolean(values.remember) }),
     });
 
     if (!res.success) {
-      setServerError(res.message ?? 'Login failed. Please try again.');
+      notify.error(res.message ?? 'Login failed. Please try again.');
       return;
     }
 
@@ -201,12 +200,6 @@ export default function LoginPage() {
                   Forgot Password?
                 </button>
               </div>
-
-              {serverError && (
-                <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {serverError}
-                </p>
-              )}
 
               <Button
                 type="submit"

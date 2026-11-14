@@ -1,46 +1,14 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronRight, Loader2, Menu } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 import { api, type ApiUser } from '@/lib/api';
 import { Sidebar } from '@/components/sidebar';
-
-const breadcrumbLabels: Record<string, string> = {
-  home: 'Home',
-  me: 'My Profile',
-  'my-requests': 'My Requests',
-  corrections: 'Correction Requests',
-  dashboard: 'Dashboard',
-  residents: 'Residents',
-  households: 'Households',
-  certificates: 'Certificates',
-  services: 'Services',
-  reports: 'Reports',
-  users: 'User Management',
-  logs: 'Activity Logs',
-  settings: 'Settings',
-};
+import { siteInfo, footerLinks } from '@/lib/site';
 
 const COLLAPSE_KEY = 'abis.sidebarCollapsed';
-
-function Breadcrumbs() {
-  const pathname = usePathname();
-  const segments = pathname.split('/').filter(Boolean);
-
-  return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-muted">
-      {segments.map((segment, index) => (
-        <span key={`${segment}-${index}`} className="flex items-center gap-1">
-          {index > 0 && <ChevronRight size={14} />}
-          <span className={index === segments.length - 1 ? 'font-medium text-primary' : undefined}>
-            {breadcrumbLabels[segment] ?? segment}
-          </span>
-        </span>
-      ))}
-    </nav>
-  );
-}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -93,14 +61,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center bg-background">
         <Loader2 className="animate-spin text-accent" size={32} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-primary/40 backdrop-blur-[2px] lg:hidden" onClick={() => setMobileOpen(false)} aria-hidden />
       )}
@@ -111,19 +79,64 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         onToggleCollapse={toggleCollapse}
         onCloseMobile={() => setMobileOpen(false)}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-3 border-b border-border bg-white px-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col print:block">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4 sm:px-6 lg:hidden print:hidden">
           <button
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
             aria-expanded={mobileOpen}
-            className="rounded-md p-1.5 text-muted hover:bg-background-light hover:text-foreground lg:hidden"
+            className="rounded-md p-1.5 text-muted hover:bg-background-light hover:text-foreground"
           >
             <Menu size={20} />
           </button>
-          <Breadcrumbs />
         </header>
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 print:overflow-visible print:p-0">{children}</main>
+        <footer className="shrink-0 border-t border-border bg-white px-4 py-2 text-[11px] text-muted sm:px-6 print:hidden">
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-col items-center justify-between gap-1 sm:flex-row">
+              <p className="text-center sm:text-left">
+                {siteInfo.region} · {siteInfo.province} · {siteInfo.municipality}
+              </p>
+              <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                {footerLinks.map((link) => (
+                  <Link key={link.href} href={link.href} className="hover:text-primary">
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            <div className="flex flex-col items-center justify-between gap-1 sm:flex-row">
+              <span className="text-center sm:text-left">
+                © {new Date().getFullYear()} {siteInfo.name}, {siteInfo.municipality.replace('Municipality of ', '')}, {siteInfo.province.replace('Province of ', '')}
+              </span>
+              <span className="flex flex-wrap items-center justify-center gap-2">
+                <span>{siteInfo.systemName}</span>
+                <span aria-hidden>·</span>
+                <span>{siteInfo.version}</span>
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-between gap-1 text-center sm:flex-row sm:text-left">
+              <span className="flex flex-wrap items-center justify-center gap-2">
+                <span>{siteInfo.address}</span>
+                <span aria-hidden>·</span>
+                <span>{siteInfo.hours}</span>
+                {siteInfo.phone && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <a href={`tel:${siteInfo.phone}`} className="hover:text-primary">{siteInfo.phone}</a>
+                  </>
+                )}
+                {siteInfo.email && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <a href={`mailto:${siteInfo.email}`} className="hover:text-primary">{siteInfo.email}</a>
+                  </>
+                )}
+              </span>
+              <span className="text-[10px]">Your personal data is protected under RA 10173 (Data Privacy Act of 2012).</span>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

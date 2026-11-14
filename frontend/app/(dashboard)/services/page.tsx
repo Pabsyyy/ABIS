@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,14 +49,11 @@ export default function ServicesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams({ page: String(meta.page), limit: String(meta.limit) });
     if (appliedSearch) params.set('search', appliedSearch);
     if (category) params.set('category', category);
@@ -63,14 +61,14 @@ export default function ServicesPage() {
     if (dateTo) params.set('dateTo', dateTo);
     const res = await api<ServiceRow[]>(`/api/services/records?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load service records');
+      notify.error(res.message ?? 'Failed to load service records');
       setRecords([]);
     } else {
       setRecords(res.data);
       if (res.meta) setMeta(res.meta);
     }
     setLoading(false);
-  }, [meta.page, meta.limit, appliedSearch, category, dateFrom, dateTo, setError]);
+  }, [meta.page, meta.limit, appliedSearch, category, dateFrom, dateTo]);
 
   useEffect(() => {
     void load();
@@ -91,9 +89,6 @@ export default function ServicesPage() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-4">
       <PageHeader title="Services" description="Monitor barangay services delivered to residents." actions={<Button size="sm" onClick={() => setModalOpen(true)}><Plus size={16} /> Add Service Record</Button>} />
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <Card>
         <CardContent className="p-4">
@@ -154,12 +149,12 @@ export default function ServicesPage() {
         </CardContent>
       </Card>
 
-      <AddServiceModal open={modalOpen} onClose={() => setModalOpen(false)} categories={categories} onCreated={() => { setNotice('Service record added.'); void load(); }} setError={setError} />
+      <AddServiceModal open={modalOpen} onClose={() => setModalOpen(false)} categories={categories} onCreated={() => { notify.success('Service record added.'); void load(); }} />
     </div>
   );
 }
 
-function AddServiceModal({ open, onClose, categories, onCreated, setError }: { open: boolean; onClose: () => void; categories: ServiceCategory[]; onCreated: () => void; setError: (v: string | null) => void }) {
+function AddServiceModal({ open, onClose, categories, onCreated }: { open: boolean; onClose: () => void; categories: ServiceCategory[]; onCreated: () => void }) {
   const [residentQuery, setResidentQuery] = useState('');
   const [residentOptions, setResidentOptions] = useState<ResidentOption[]>([]);
   const [resident, setResident] = useState<ResidentOption | null>(null);
@@ -194,7 +189,7 @@ function AddServiceModal({ open, onClose, categories, onCreated, setError }: { o
     });
     setSaving(false);
     if (!res.success) {
-      setError(res.errors?.map((er) => `${er.field}: ${er.message}`).join('; ') ?? res.message ?? 'Failed to save service record');
+      notify.error(res.errors?.map((er) => `${er.field}: ${er.message}`).join('; ') ?? res.message ?? 'Failed to save service record');
       return;
     }
     setResident(null);

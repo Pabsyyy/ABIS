@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Field, Select, Textarea } from '@/components/ui/select';
@@ -25,18 +26,17 @@ export function CertificateRequestModal({ open, onClose, onSubmitted, types: pro
   const [types, setTypes] = useState<CertificateTypeOption[]>(providedTypes ?? []);
   const [certificateType, setCertificateType] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setError(null);
     if (providedTypes) {
       setTypes(providedTypes.filter((t) => t.active !== false));
       return;
     }
     api<CertificateTypeOption[]>('/api/certificates/types').then((res) => {
       if (res.success && res.data) setTypes(res.data.filter((t) => t.active !== false));
+      else notify.error(res.message ?? 'Failed to load certificate types');
     });
   }, [open, providedTypes]);
 
@@ -44,13 +44,11 @@ export function CertificateRequestModal({ open, onClose, onSubmitted, types: pro
     if (saving) return;
     setCertificateType('');
     setPurpose('');
-    setError(null);
     onClose();
   };
 
   const submitRequest = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSaving(true);
     const res = await api('/api/me/certificate-requests', {
       method: 'POST',
@@ -58,7 +56,7 @@ export function CertificateRequestModal({ open, onClose, onSubmitted, types: pro
     });
     setSaving(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to submit request');
+      notify.error(res.message ?? 'Failed to submit request');
       return;
     }
     setCertificateType('');
@@ -70,7 +68,6 @@ export function CertificateRequestModal({ open, onClose, onSubmitted, types: pro
   return (
     <Modal open={open} onClose={close} title="New Request" description="Your request goes to the Barangay Captain for approval. You will be notified of the outcome.">
       <form onSubmit={submitRequest} className="flex flex-col gap-4">
-        {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <Field label="Certificate type *">
           <Select required value={certificateType} onChange={(e) => setCertificateType(e.target.value)}>
             <option value="">Select certificate type…</option>

@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,8 +41,6 @@ export default function HouseholdsPage() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [purok, setPurok] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -54,13 +53,12 @@ export default function HouseholdsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams({ page: String(meta.page), limit: String(meta.limit) });
     if (appliedSearch) params.set('search', appliedSearch);
     if (purok) params.set('purok', purok);
     const res = await api<HouseholdRow[]>(`/api/households?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load households');
+      notify.error(res.message ?? 'Failed to load households');
       setHouseholds([]);
     } else {
       setHouseholds(res.data);
@@ -101,17 +99,16 @@ export default function HouseholdsPage() {
   const createHousehold = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
     const res = await api('/api/households', {
       method: 'POST',
       body: JSON.stringify({ ...createForm }),
     });
     setSaving(false);
     if (!res.success) {
-      setError(res.errors?.map((er) => `${er.field}: ${er.message}`).join('; ') ?? res.message ?? 'Failed to create household');
+      notify.error(res.errors?.map((er) => `${er.field}: ${er.message}`).join('; ') ?? res.message ?? 'Failed to create household');
       return;
     }
-    setNotice('Household created.');
+    notify.success('Household created.');
     setModalOpen(false);
     setCreateForm({ householdNumber: '', purok: '', address: '', headResident: '' });
     setHeadQuery('');
@@ -121,7 +118,7 @@ export default function HouseholdsPage() {
   const viewDetail = async (h: HouseholdRow) => {
     const res = await api<HouseholdRow & { members?: ResidentOption[] }>(`/api/households/${h._id}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load household');
+      notify.error(res.message ?? 'Failed to load household');
       return;
     }
     setDetail(res.data);
@@ -132,10 +129,10 @@ export default function HouseholdsPage() {
     if (!window.confirm(`Archive household ${h.householdNumber}?`)) return;
     const res = await api(`/api/households/${h._id}/archive`, { method: 'POST' });
     if (!res.success) {
-      setError(res.message ?? 'Failed to archive household');
+      notify.error(res.message ?? 'Failed to archive household');
       return;
     }
-    setNotice('Household archived.');
+    notify.success('Household archived.');
     await load();
   };
 
@@ -146,9 +143,6 @@ export default function HouseholdsPage() {
         description="Household records and composition. Residents are linked, never duplicated."
         actions={<Button size="sm" onClick={() => setModalOpen(true)}><Plus size={16} /> Create Household</Button>}
       />
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <Card>
         <CardContent className="p-4">

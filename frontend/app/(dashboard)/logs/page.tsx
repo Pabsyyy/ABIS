@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,9 @@ export default function LogsPage() {
     if (action) params.set('action', action);
     const res = await api<LogRow[]>(`/api/admin/logs?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load logs (secretary only)');
+      const message = res.message ?? 'Failed to load logs (secretary only)';
+      setError(message);
+      notify.error(message);
       setLogs([]);
     } else {
       setLogs(res.data);
@@ -51,8 +54,6 @@ export default function LogsPage() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <PageHeader title="Activity Logs" description="Audit trail of important system actions. Visible to the Barangay Secretary only." actions={<Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw size={16} /> Refresh</Button>} />
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex w-72 flex-col gap-1.5">
@@ -73,7 +74,7 @@ export default function LogsPage() {
           {loading ? (
             <div className="flex items-center justify-center p-12"><Loader2 className="animate-spin text-accent" size={26} /></div>
           ) : logs.length === 0 ? (
-            <p className="p-12 text-center text-sm text-muted">No log entries match the filter.</p>
+            <p className="p-12 text-center text-sm text-muted">{error ?? 'No log entries match the filter.'}</p>
           ) : (
             <>
               <div className="overflow-x-auto">

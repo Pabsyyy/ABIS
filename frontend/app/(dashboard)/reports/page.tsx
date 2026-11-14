@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,13 +64,15 @@ export default function ReportsPage() {
     setError(null);
     const res = await api<ReportData>(`/api/reports/${type}?${queryString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to generate report');
+      const message = res.message ?? 'Failed to generate report';
+      setError(message);
+      notify.error(message);
       setReport(null);
     } else {
       setReport(res.data);
     }
     setLoading(false);
-  }, [type, queryString, setError]);
+  }, [type, queryString]);
 
   useEffect(() => {
     void generate();
@@ -101,8 +104,6 @@ export default function ReportsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 print:hidden">{error}</p>}
 
       {loading ? (
         <div className="flex items-center justify-center p-16"><Loader2 className="animate-spin text-accent print:hidden" size={30} /></div>
@@ -139,6 +140,13 @@ export default function ReportsPage() {
               </table>
             </div>
             <p className="mt-3 text-[11px] text-muted">Total rows: {report.rows.length}</p>
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card className="print:hidden">
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center text-sm text-muted">
+            <p>{error}</p>
+            <Button variant="outline" size="sm" onClick={() => void generate()}><RefreshCw size={16} /> Retry</Button>
           </CardContent>
         </Card>
       ) : null}

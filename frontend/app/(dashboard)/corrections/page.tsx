@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge, Select } from '@/components/ui/select';
@@ -22,23 +23,20 @@ export default function CorrectionsPage() {
   const [items, setItems] = useState<CorrectionRow[]>([]);
   const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     const res = await api<CorrectionRow[]>(`/api/admin/correction-requests?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load correction requests');
+      notify.error(res.message ?? 'Failed to load correction requests');
       setItems([]);
     } else {
       setItems(res.data);
     }
     setLoading(false);
-  }, [status, setError]);
+  }, [status]);
 
   useEffect(() => {
     void load();
@@ -49,19 +47,16 @@ export default function CorrectionsPage() {
     if (note === null) return;
     const res = await api(`/api/admin/correction-requests/${id}/${action}`, { method: 'POST', body: JSON.stringify({ resolutionNote: note }) });
     if (!res.success) {
-      setError(res.message ?? 'Action failed');
+      notify.error(res.message ?? 'Action failed');
       return;
     }
-    setNotice(action === 'apply' ? 'Correction applied to the resident record.' : 'Correction rejected.');
+    notify.success(action === 'apply' ? 'Correction applied to the resident record.' : 'Correction rejected.');
     await load();
   };
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4">
       <PageHeader title="Correction Requests" description="Residents ask to fix their own records; you apply or reject each one. Nothing is changed without your action." actions={<Button variant="outline" size="sm" onClick={() => void load()}><RefreshCw size={16} /> Refresh</Button>} />
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <div className="w-48">
         <Select value={status} onChange={(e) => setStatus(e.target.value)}>

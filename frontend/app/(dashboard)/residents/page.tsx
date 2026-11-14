@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -77,8 +78,6 @@ export default function ResidentsPage() {
   const [classification, setClassification] = useState('');
   const [status, setStatus] = useState<'active' | 'archived'>('active');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [classifications, setClassifications] = useState<Classification[]>([]);
   const [puroks, setPuroks] = useState<string[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -90,7 +89,6 @@ export default function ResidentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams({
       page: String(meta.page),
       limit: String(meta.limit),
@@ -101,7 +99,7 @@ export default function ResidentsPage() {
     if (classification) params.set('classification', classification);
     const res = await api<Resident[]>(`/api/residents?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load residents');
+      notify.error(res.message ?? 'Failed to load residents');
       setResidents([]);
     } else {
       setResidents(res.data);
@@ -166,7 +164,6 @@ export default function ResidentsPage() {
   const submitForm = async (e: FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
     const payload = {
       ...form,
       monthlyIncome: form.monthlyIncome === '' ? undefined : Number(form.monthlyIncome),
@@ -179,10 +176,10 @@ export default function ResidentsPage() {
 
     if (!res.success) {
       const detail = res.errors?.map((er) => `${er.field}: ${er.message}`).join('; ') ?? res.message ?? 'Save failed';
-      setError(detail);
+      notify.error(detail);
       return;
     }
-    setNotice(editing ? 'Resident updated.' : 'Resident added.');
+    notify.success(editing ? 'Resident updated.' : 'Resident added.');
     setModalOpen(false);
     await load();
   };
@@ -193,10 +190,10 @@ export default function ResidentsPage() {
     if (!confirmed) return;
     const res = await api(`/api/residents/${r._id}/${action}`, { method: 'POST' });
     if (!res.success) {
-      setError(res.message ?? `Failed to ${action} resident`);
+      notify.error(res.message ?? `Failed to ${action} resident`);
       return;
     }
-    setNotice(`Resident ${doArchive ? 'archived' : 'restored'}.`);
+    notify.success(`Resident ${doArchive ? 'archived' : 'restored'}.`);
     await load();
   };
 
@@ -238,8 +235,6 @@ export default function ResidentsPage() {
         }
       />
 
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
       {importReport && <p role="status" className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">{importReport}</p>}
 
       <Card>

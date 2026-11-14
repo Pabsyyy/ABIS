@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, type ApiUser } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -73,8 +74,6 @@ function fullName(r?: { firstName: string; lastName: string }) {
 export default function CertificatesPage() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [tab, setTab] = useState<Tab>('requests');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     api<{ user: ApiUser }>('/api/auth/me').then((res) => {
@@ -88,8 +87,6 @@ export default function CertificatesPage() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-4">
       <PageHeader title="Certificates" description="Request, approve, issue and track barangay certificates." />
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <div className="flex gap-1 border-b border-border">
         {([
@@ -103,14 +100,14 @@ export default function CertificatesPage() {
         ))}
       </div>
 
-      {tab === 'requests' && <RequestsTab canApprove={isCaptainOrSecretary} isSecretary={isSecretary} setError={setError} setNotice={setNotice} />}
-      {tab === 'issued' && <IssuedTab setError={setError} setNotice={setNotice} />}
-      {tab === 'types' && <TypesTab setError={setError} setNotice={setNotice} />}
+      {tab === 'requests' && <RequestsTab canApprove={isCaptainOrSecretary} isSecretary={isSecretary} />}
+      {tab === 'issued' && <IssuedTab />}
+      {tab === 'types' && <TypesTab />}
     </div>
   );
 }
 
-function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canApprove: boolean; isSecretary: boolean; setError: (v: string | null) => void; setNotice: (v: string | null) => void }) {
+function RequestsTab({ canApprove, isSecretary }: { canApprove: boolean; isSecretary: boolean }) {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [meta, setMeta] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [status, setStatus] = useState('');
@@ -121,19 +118,18 @@ function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canAppr
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams({ page: String(meta.page), limit: String(meta.limit) });
     if (status) params.set('status', status);
     const res = await api<RequestRow[]>(`/api/certificates/requests?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load requests');
+      notify.error(res.message ?? 'Failed to load requests');
       setRequests([]);
     } else {
       setRequests(res.data);
       if (res.meta) setMeta(res.meta);
     }
     setLoading(false);
-  }, [meta.page, meta.limit, status, setError]);
+  }, [meta.page, meta.limit, status]);
 
   useEffect(() => {
     void load();
@@ -143,10 +139,17 @@ function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canAppr
     if (confirmText && !window.confirm(confirmText)) return;
     const res = await api(url, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
     if (!res.success) {
-      setError(res.message ?? 'Action failed');
+      notify.error(res.message ?? 'Action failed');
       return;
     }
-    setNotice('Done.');
+    const verb = url.split('/').pop() ?? '';
+    const labels: Record<string, string> = {
+      approve: 'Request approved.',
+      issue: 'Certificate issued.',
+      release: 'Certificate released.',
+      cancel: 'Request cancelled.',
+    };
+    notify.success(labels[verb] ?? 'Done.');
     await load();
   };
 
@@ -154,12 +157,12 @@ function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canAppr
     if (!rejectId) return;
     const res = await api(`/api/certificates/requests/${rejectId}/reject`, { method: 'POST', body: JSON.stringify({ reason: rejectReason }) });
     if (!res.success) {
-      setError(res.message ?? 'Failed to reject request');
+      notify.error(res.message ?? 'Failed to reject request');
       return;
     }
     setRejectId(null);
     setRejectReason('');
-    setNotice('Request rejected.');
+    notify.success('Request rejected.');
     await load();
   };
 
@@ -240,7 +243,7 @@ function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canAppr
         </CardContent>
       </Card>
 
-      <NewRequestModal open={newOpen} onClose={() => setNewOpen(false)} onCreated={() => { setNotice('Request submitted.'); void load(); }} setError={setError} />
+      <NewRequestModal open={newOpen} onClose={() => setNewOpen(false)} onCreated={() => { notify.success('Request submitted.'); void load(); }} />
       <Modal open={rejectId !== null} onClose={() => setRejectId(null)} title="Reject request" description="Provide a reason. The requester can be informed at the hall.">
         <div className="flex flex-col gap-3">
           <Field label="Reason"><Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} autoFocus /></Field>
@@ -254,7 +257,7 @@ function RequestsTab({ canApprove, isSecretary, setError, setNotice }: { canAppr
   );
 }
 
-function NewRequestModal({ open, onClose, onCreated, setError }: { open: boolean; onClose: () => void; onCreated: () => void; setError: (v: string | null) => void }) {
+function NewRequestModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [residentQuery, setResidentQuery] = useState('');
   const [residentOptions, setResidentOptions] = useState<ResidentOption[]>([]);
   const [resident, setResident] = useState<ResidentOption | null>(null);
@@ -293,7 +296,7 @@ function NewRequestModal({ open, onClose, onCreated, setError }: { open: boolean
     });
     setSaving(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to create request');
+      notify.error(res.message ?? 'Failed to create request');
       return;
     }
     setResident(null);
@@ -349,7 +352,7 @@ function NewRequestModal({ open, onClose, onCreated, setError }: { open: boolean
   );
 }
 
-function IssuedTab({ setError, setNotice }: { setError: (v: string | null) => void; setNotice: (v: string | null) => void }) {
+function IssuedTab() {
   const [items, setItems] = useState<IssuedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -362,19 +365,18 @@ function IssuedTab({ setError, setNotice }: { setError: (v: string | null) => vo
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const params = new URLSearchParams({ page: '1', limit: '50' });
     if (appliedSearch) params.set('search', appliedSearch);
     if (paymentStatus) params.set('paymentStatus', paymentStatus);
     const res = await api<IssuedRow[]>(`/api/certificates/issued?${params.toString()}`);
     if (!res.success || !res.data) {
-      setError(res.message ?? 'Failed to load issued certificates');
+      notify.error(res.message ?? 'Failed to load issued certificates');
       setItems([]);
     } else {
       setItems(res.data);
     }
     setLoading(false);
-  }, [appliedSearch, paymentStatus, setError]);
+  }, [appliedSearch, paymentStatus]);
 
   useEffect(() => {
     void load();
@@ -389,11 +391,11 @@ function IssuedTab({ setError, setNotice }: { setError: (v: string | null) => vo
     });
     setPaymentSave(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to record payment');
+      notify.error(res.message ?? 'Failed to record payment');
       return;
     }
     setPaymentFor(null);
-    setNotice('Payment recorded.');
+    notify.success('Payment recorded.');
     await load();
   };
 
@@ -474,7 +476,7 @@ function IssuedTab({ setError, setNotice }: { setError: (v: string | null) => vo
   );
 }
 
-function TypesTab({ setError, setNotice }: { setError: (v: string | null) => void; setNotice: (v: string | null) => void }) {
+function TypesTab() {
   const [types, setTypes] = useState<CertificateTypeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -485,9 +487,9 @@ function TypesTab({ setError, setNotice }: { setError: (v: string | null) => voi
     setLoading(true);
     const res = await api<CertificateTypeRow[]>('/api/certificates/types');
     if (res.success && res.data) setTypes(res.data);
-    else setError(res.message ?? 'Failed to load certificate types');
+    else notify.error(res.message ?? 'Failed to load certificate types');
     setLoading(false);
-  }, [setError]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -500,21 +502,22 @@ function TypesTab({ setError, setNotice }: { setError: (v: string | null) => voi
       body: JSON.stringify({ name, fee: Number(fee || 0), requiresApproval }),
     });
     if (!res.success) {
-      setError(res.message ?? 'Failed to create certificate type');
+      notify.error(res.message ?? 'Failed to create certificate type');
       return;
     }
     setName('');
     setFee('0');
-    setNotice('Certificate type created.');
+    notify.success('Certificate type created.');
     await load();
   };
 
   const toggle = async (t: CertificateTypeRow) => {
     const res = await api(`/api/certificates/types/${t._id}`, { method: 'PATCH', body: JSON.stringify({ active: !t.active }) });
     if (!res.success) {
-      setError(res.message ?? 'Failed to update');
+      notify.error(res.message ?? 'Failed to update');
       return;
     }
+    notify.success(t.active ? 'Certificate type deactivated.' : 'Certificate type activated.');
     await load();
   };
 

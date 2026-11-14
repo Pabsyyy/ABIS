@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { api, type ApiUser } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +33,6 @@ export default function SettingsPage() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [backups, setBackups] = useState<BackupFile[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,7 +46,9 @@ export default function SettingsPage() {
       api<SettingsData>('/api/admin/settings'),
     ]);
     if (meRes.success && meRes.data) setUser(meRes.data.user);
+    else notify.error(meRes.message ?? 'Failed to load your account');
     if (settingsRes.success && settingsRes.data) setSettings(settingsRes.data);
+    else notify.error(settingsRes.message ?? 'Failed to load settings');
     const backupRes = await api<{ files: BackupFile[] }>('/api/admin/backup/logs');
     if (backupRes.success && backupRes.data) setBackups(backupRes.data.files ?? []);
   };
@@ -60,37 +61,34 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!settings) return;
     setSaving(true);
-    setError(null);
     const res = await api('/api/admin/settings', { method: 'PATCH', body: JSON.stringify(settings) });
     setSaving(false);
     if (!res.success) {
-      setError(res.message ?? 'Failed to save settings');
+      notify.error(res.message ?? 'Failed to save settings');
       return;
     }
-    setNotice('Settings saved.');
+    notify.success('Settings saved.');
   };
 
   const changePassword = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     const res = await api('/api/admin/me/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
     if (!res.success) {
-      setError(res.message ?? 'Failed to change password');
+      notify.error(res.message ?? 'Failed to change password');
       return;
     }
-    setNotice('Password changed.');
+    notify.success('Password changed.');
     setCurrentPassword('');
     setNewPassword('');
   };
 
   const createBackup = async () => {
-    setError(null);
     const res = await api<{ filename: string; sizeBytes: number }>('/api/admin/backup', { method: 'POST' });
     if (!res.success) {
-      setError(res.message ?? 'Backup failed');
+      notify.error(res.message ?? 'Backup failed');
       return;
     }
-    setNotice(`Backup created: ${res.data?.filename ?? ''}`);
+    notify.success(`Backup created: ${res.data?.filename ?? ''}`);
     await load();
   };
 
@@ -100,14 +98,13 @@ export default function SettingsPage() {
     const password = window.prompt('Enter your password to authorize the restore:');
     if (!password) return;
     setRestoring(true);
-    setError(null);
     const res = await api('/api/admin/backup/restore', { method: 'POST', body: JSON.stringify({ filename, password, confirm: 'RESTORE' }) });
     setRestoring(false);
     if (!res.success) {
-      setError(res.message ?? 'Restore failed');
+      notify.error(res.message ?? 'Restore failed');
       return;
     }
-    setNotice('Restore completed. Please sign in again.');
+    notify.success('Restore completed. Please sign in again.');
   };
 
   return (
@@ -116,9 +113,6 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-semibold text-primary">Settings</h1>
         <p className="text-sm text-muted">Barangay profile, account security, and database backup.</p>
       </div>
-
-      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-      {notice && <p role="status" className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">{notice}</p>}
 
       <Card>
         <CardHeader>

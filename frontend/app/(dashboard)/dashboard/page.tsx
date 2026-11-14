@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { notify } from '@/lib/notify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Home, FileText, HandHeart, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -38,6 +39,7 @@ export default function DashboardPage() {
       api<Summary>('/api/dashboard/summary').then((summaryRes) => {
         if (!summaryRes.success || !summaryRes.data) {
           setError(summaryRes.message ?? 'Failed to load dashboard data');
+          notify.error(summaryRes.message ?? 'Failed to load dashboard data');
         } else {
           setSummary(summaryRes.data);
         }
